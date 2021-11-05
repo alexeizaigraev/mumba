@@ -18,6 +18,8 @@ def strInBoth(str1, str2):
 
 
 def mk_koatu2(koatuSpr, sity, distrSity, koatu, adrFull):
+    if not koatu:
+        return ''
     for line in koatuSpr:
         sprKoatu = line[1]
         sprPlace = line[2]

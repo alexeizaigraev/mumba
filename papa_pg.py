@@ -39,34 +39,34 @@ def clear_table(table):
     execstr =  f'DELETE FROM {table}'
     dbexec(execstr)
 
-def clear_otbor():
-    clear_table('otbor')
+def table_from_file_to_arr(fname):
+    return file_to_arr(IN_DATA_PATH + fname)[1:]
 
-def clear_dep():
-    clear_table('departments')
-
-def clear_term():
-    clear_table('terminals')
-
-
-def insert_otbor(v):
-    query = f""" INSERT INTO otbor (term, dep)
-                              VALUES ({v[0]}, {v[1]});"""
-    dbexec(query)
-
-def insert_one_dep(v):
-    #print('# insert_one_dep')
-    q = '''INSERT INTO departments (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
-    db_exec_vec(q, v)
-    
-def insert_one_term(v):
-    #print('# insert_one_term')
-    q = '''INSERT INTO terminals (department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+def refresh_table(table_name, fname):
+    clear_table(table_name)
+    arr = table_from_file_to_arr(fname)
+    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
+    cur = con.cursor()
+    for vec in arr:
+        if table_name == 'departments':
+            query = f'''INSERT INTO departments (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id)
+VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}');'''
+        elif table_name == 'terminals':
+            query = f'''INSERT INTO terminals (department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro)
+VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}', '{vec[19]}')
 '''
-    db_exec_vec(q, v)    
-
+        elif table_name == 'otbor':
+            query = f''' INSERT INTO otbor (term, dep)
+VALUES ('{vec[0]}', '{vec[1]}')'''
+        try:
+            cur.execute(query)
+        except Exception as ex:
+            p_red(str(ex))
+    con.commit()
+    if con:
+        cur.close()
+        con.close()
+    p_blue(f'refresh {table_name}')
 
 
 def title_string(s):
@@ -75,52 +75,7 @@ def title_string(s):
 
 
 def insert_all_deps():
-    clear_dep()
-    q_err = 0
-    query = '''INSERT INTO departments (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
-
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        #p_blue('db open ok')
-
-        data = file_to_arr(IN_DATA_PATH + 'departments.csv')
-        if 'department' in data[0][0]:
-            data = data[1:]
-        size_line = len(data[0])
-        
-        count_line = -1
-        
-        for vec in data:
-            vec.append('')
-            if vec[0] and len(vec) == size_line + 1:
-                cur.execute(query, vec)
-            else:
-                q_err += 1
-                print(f'>> {vec[0]} {len(vec)=}')                    
-            #con.commit()
-            if verb:
-                pass
-                #print(vec[0])                
-        con.commit()
-        
-    except (Exception) as error:
-        q_err += 1
-        print('>>', error)
-    finally:
-        if con:
-            cur.close()
-            con.close()
-
-    if q_err == 0:
-        p_blue('refresh deps\n')
-    else:
-        print('refresh deps', 'errors:', q_err, '\n')
-
-
-
-
+    refresh_table('departments', 'departments.csv')
 
 
 def mk_finish0(reg_date, mod):
@@ -160,88 +115,13 @@ def make_finish(vec):
 
 
 def insert_all_terms():
-    clear_term()
-    q_err = 0
-    query = '''INSERT INTO terminals (department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro, register, finish)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-'''
-
-    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-    cur = con.cursor()
-    #p_blue('db open ok')
-    data = file_to_arr(IN_DATA_PATH + 'terminals.csv')
-    if 'department' in data[0][0]:
-        data = data[1:]
-    size_line = len(data[0])
-    for vec in data:
-        # cat time
-        #vec = good_date{vec}
-            
-        # make finish
-        #vec = make_finish(vec)
-             
-        if vec[1] and len(vec) == size_line:
-            try:
-                cur.execute(query, vec)
-            except:
-                p_red(query)
-                q_err += 1
-        else:
-            print(f'>> {vec[1]} {len(vec)=}')
-        if verb:
-            print(vec[1])                
-    con.commit()
-        
-    if con:
-        cur.close()
-        con.close()
-
-    if q_err == 0:
-        p_blue('refresh terms\n')
-    else:
-        print('refresh terms', 'errors:', q_err, '\n')
+    refresh_table('terminals', 'terminals.csv')
 
 
 
 
 def insert_all_otbor():
-    #print('# insert_all_otbor')
-    clear_otbor()
-    q_err = 0
-
-    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-    cur = con.cursor()
-    #p_blue('db open ok')
-
-    data = file_to_arr(IN_DATA_PATH + 'otbor.csv')
-    if 'term' in data[0][0]:
-       data = data[1:]
-    size_line = len(data[0])
-        
-    for vec in data:
-        if vec[0] and vec[1] and len(vec) == size_line:
-            query = f""" INSERT INTO otbor (term, dep)
-VALUES ({vec[0]}, {vec[1]});"""
-            try:
-                cur.execute(query)
-            except Exception as ex:
-                print(ex)
-                q_err += 1
-        else:
-            print(f'>> {vec[1]} {len(vec)=}')                    
-        #con.commit()
-        if verb:
-            print(vec[1])                
-    con.commit()
-    
-    if con:
-        cur.close()
-        con.close()
-
-    if q_err == 0:
-        p_blue('refresh otbor\n')
-    else:
-        print('refresh otbor', 'errors:', q_err, '\n')
+    refresh_table('otbor', 'otbor.csv')
 
 
 
@@ -717,10 +597,14 @@ VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{nau}', '{kind}');"""
         cur.close()
         con.close()
 
+    now = str(datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S"))
+    out_path = 'R:/DRM/BackupAccess/db2_be_' + now + '_' + kind + '.accdb'
+    in_path = IN_DATA_PATH + 'drm.db'
     try:
-        os.system(PYTHON_NAME + ' accback.py')
-    except Exception as ex:
-        print(ex)
+        shutil.copy(in_path, out_path)
+        print(f'\n{out_path}')
+    except:
+        print('\n\tno accback')
 
 
 

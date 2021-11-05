@@ -107,9 +107,11 @@ def menu_some():
     os.system(COM_CLEAR)
 
 def menu_monitor():
-    h = {'Walker': 'momnitor/walker',
-        'Monitor': 'momnitor/monitor',
-        'Accback': 'momnitor/accback',}
+    h = {'Walker': 'monitor/walker',
+        'Monitor': 'monitor/monitor',
+        'Accback': 'monitor/accback',
+        'Get_RP_Fast': 'monitor/get_rp_fast',
+        'Get_rp_all': 'monitor/get_rp_all',}
     mk_menu(h, len(h))
 
 def menu_kabinet():
@@ -124,9 +126,7 @@ def menu_kabinet():
 
 
 def menu_other():
-    h = {'Get_RP_Fast': 'other/get_rp_fast',
-        'Get_rp_all': 'other/get_rp_all',
-        'Kvadratiki': 'other/kvadratiki',}
+    h = {'Kvadratiki': 'other/kvadratiki',}
     os.system(COM_CLEAR)
     mk_menu(h, 2)
 
