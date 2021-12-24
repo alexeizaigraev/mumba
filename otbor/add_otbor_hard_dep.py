@@ -4,22 +4,30 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.par
 from modules import *
 from papa_pg import *
 
+init()
 head = 'term;dep\n'
 out = head
-p_cyan(' Dep: From To\n')
+
+all_deps = get_departments_list()
+
+p_cyan(' Departments list:\n\n')
 choise = input(' -> ')
 
+deps = []
 if ' ' in choise:
-    start, finish = choise.split(' ')
-    start, finish = int(start), int(finish) + 1
+    deps = choise.split(' ')
 else:
-    start = int(choise)
-    finish = start + 1
+    deps.append(choise)
 
-for x in range(start, finish):
-    dep, term = str(x), str(x*10+1)
+for dep in deps:
+    if dep not in all_deps:
+        p_red(dep)
+    term = dep + '1'
     out += term + ';' + dep + '\n'
 
 p_green('\n' + out + '\n')
 text_to_file(out, IN_DATA_PATH + 'otbor.csv')
 insert_all_otbor()
+
+
+

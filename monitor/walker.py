@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.par
 from modules import *
 import os
 import shutil
+from papa_pg import insert_all_otbor
 
 def dir_in_walk():
     return file_to_arr(CONFIG_PATH + 'ConfigRaskladPath.txt')[0]
@@ -24,6 +25,8 @@ def mk_agents():
     return file_to_dict_one(COMON_DATA_PATH, 3)
 
 def mover():
+    head = 'term;dep\n'
+    out = head
     agents = mk_agents()
     a = os.listdir(dir_in_walk())
     if len(a) < 1:
@@ -52,8 +55,15 @@ def mover():
         try:
             shutil.move(old_fname, new_fname)
             p_cyan(new_fname)
+            if '_RP_' in fname:
+                dep = fname.split('_RP_')[0]
+                term = dep + '1'
+                out += f'{term};{dep}\n'
         except:
             p_red(new_fname)
+    text_to_file(out, IN_DATA_PATH + 'otbor.csv')
+    insert_all_otbor()
+    p_blue(f'\n{out}\n')
         
         
         

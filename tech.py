@@ -1,9 +1,16 @@
+import os
 import getpass
+from colorama import Fore, Style, init
 
 def tech():
     say = 'q'
-    while say != '123':
+    init()
+    print(Fore.BLACK)
+    while True:
         say = getpass.getpass()
-        print('namaste')
+        os.system('cls')
+        if say.lower() != 'az' or say.lower() != 'фя':
+            break
+        #print('namaste')
 
-#tech()
+tech()

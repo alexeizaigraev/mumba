@@ -9,14 +9,15 @@ def dir_out_post():
     return file_to_arr(CONFIG_PATH + 'ConfigPostPath.txt')[0]
 
 def post_all(ag, fout):
-    out_text = "Логин; ФИО; Терминал\n"
-    a = [f'{line[0]};{line[2]};{line[-2]}' 
+    out_text = "login;status;fio;terminal;agent\n"
+    a = [f'{line[0]};{line[1]};{line[2]};{line[-2]};{line[-1].strip()}' 
         for line in all_kass
         if (len(line) > 3 \
             and ag in line[-1] \
             and ('true' in line[1]))]
-    out_text += '\n'.join(a)
+    out_text += '\n'.join(a).rstrip()
     text_to_file(out_text, fout)
+    #ssay(fout)
 
 
 
@@ -37,7 +38,7 @@ def kass(ag):
 
 def post_otpuska(ag, fout):
     logins = kass(ag)
-    out_text = "Логин;Начало отпуска;Конец отпуска\n"
+    out_text = "login;otpusk_start;otpusk_finish;data_uvolneniya\n"
     
     a = file_to_arr(IN_DATA_PATH + 'all_otpuska.csv')
     rez = [';'.join(line[:4]).replace('null', '')
@@ -45,6 +46,7 @@ def post_otpuska(ag, fout):
         if line[0] in logins]
     out_text += '\n'.join(rez)
     text_to_file(out_text, fout)
+    #say(fout)
 
 post_path = GDRIVE_PATH
 #all_kass = file_to_arr(IN_DATA_PATH + 'kass_all.csv')
@@ -72,3 +74,6 @@ post_all('allo', post_path + 'allo/OutPostAllAllo.csv')
 post_all('satua', post_path + 'sat/OutPostAllSat.csv')
 post_otpuska('satua', post_path + 'sat/OutPostOtpuskaSat.csv')
 
+post_path = OUT_DATA_PATH + 'DOC/'
+post_all('justin', post_path + 'justin/OutPostAll.csv')
+post_otpuska('justin', post_path + 'justin/OutPostOtpuskaJust.csv')

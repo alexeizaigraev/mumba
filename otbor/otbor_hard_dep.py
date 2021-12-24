@@ -8,21 +8,21 @@ init()
 head = 'term;dep\n'
 out = head
 
-all_term = get_terminals_list()
+all_deps = get_departments_list()
 
-p_cyan(' Terminals:\n')
+p_cyan(' Departments list:\n\n')
 choise = input(' -> ')
 
-terms = []
+deps = []
 if ' ' in choise:
-    terms = choise.split(' ')
+    deps = choise.split(' ')
 else:
-    terms.append(choise)
+    deps.append(choise)
 
-for term in terms:
-    if term not in all_term:
-        p_red(term)
-    dep = term[:7]
+for dep in deps:
+    if dep not in all_deps:
+        p_red(dep)
+    term = dep + '1'
     out += term + ';' + dep + '\n'
 
 p_green('\n' + out + '\n')

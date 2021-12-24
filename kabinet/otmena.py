@@ -2,7 +2,19 @@ import os.path, sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir)) 
 
 from modules import *
-from papa_pg import get_kabinet_otmena_data, loger_pg
+from papa_pg import get_data, loger_pg
+
+def get_kabinet_otmena_data():
+    query = '''SELECT terminals.ticket_number, terminals.serial_number,
+terminals.model, terminals.soft, terminals.rne_rro, 
+departments.address, departments.koatu, departments.tax_id,
+terminals.fiscal_number, departments.department
+FROM otbor, terminals, departments
+WHERE otbor.term = terminals.termial
+AND departments.department = terminals.department
+ORDER BY terminals.termial;'''
+    return get_data(query)
+
 
 
 data = get_kabinet_otmena_data()
@@ -58,7 +70,7 @@ for insert_data in data:
 </DECLAR>"""
 
     ofname = KABINET_DIR + insert_data[-1] +'_otmena_' + insert_data[-2] + '_' + insert_data[1] + '.xml'
-    #print(ofname)
+    #say(ofname)
     text_to_file_cp1251(shablon, ofname)
 
 loger_pg('otmena')

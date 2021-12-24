@@ -5,6 +5,15 @@ from modules import *
 from papa_pg import *
 
 
+def get_summury_data():
+        u = "'1700999'"
+        query = f'''SELECT department, address, partner
+    FROM departmentsnew
+    WHERE department != {u}
+    ORDER BY department;'''
+        return get_data(query)
+
+info = ''
 head = '№ п/п;"№ Відділення ТОВ ""ЕПС""";Адреса;Партнер\n'
 out_text = head
 
@@ -12,13 +21,18 @@ data = get_summury_data()
 
 natasha = mk_natasha()
 my_deps = []
-count = 0
+sum = 1
+count_line = 0
 for line in data:
     if line[0] not in natasha:
         continue
-    count += 1
-    out_line = f'{count};{line[0]};{line[1]};{line[2]}'
+    sum += 1
+    count_line += 1
+    out_line = f'{count_line};{line[0]};{line[1]};{line[2]}'
     out_text += out_line + '\n'
+
     
-text_to_file(out_text, OUT_DATA_PATH + 'summury_ab.csv')
+ofName = OUT_DATA_PATH + 'summury_ab.csv'
+text_to_file(out_text, ofName)
+say(f'\n\t{sum - 1}')
 

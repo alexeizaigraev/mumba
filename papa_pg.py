@@ -3,46 +3,147 @@ import psycopg2
 from datetime import datetime
 
 def dbexec(execstr):
-    #print('# dbexec')
+    info = ''
     try:
         con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
         cur = con.cursor()
         cur.execute(execstr)
         con.commit()
-        if verb:
-            p_blue(execstr)
     except (Exception) as error:
-        print ('>>', error)
+        alarm(error)
     finally:
         if con:
             cur.close()
             con.close()
-
+        
 def db_exec_vec(execstr, vec):
-    #print('# db_exec_vec')
+    info = ''
     try:
         con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
         cur = con.cursor()
         cur.execute(execstr, vec)
         con.commit()
-        if verb:
-            print(vec[0])
     except Exception as error:
-        print('>>', error)
+        info += str(error) + '\n'
     finally:
         if con:
             cur.close()
             con.close()
+    return info
  
             
 def clear_table(table):
     execstr =  f'DELETE FROM {table}'
     dbexec(execstr)
 
+
+def del_dep_new(dep):
+    q=f"""DELETE FROM public.departmentsnew
+	WHERE department = '{dep}';
+    """
+    dbexec(q)
+
+def del_dep(dep):
+    q=f"""DELETE FROM public.departments
+	WHERE department = '{dep}';
+    """
+    dbexec(q)
+
+def del_term(term):
+    q=f"""DELETE FROM public.terminals
+	WHERE termial = '{term}';
+    """
+    dbexec(q)
+
+  
+
+
+
 def table_from_file_to_arr(fname):
     return file_to_arr(IN_DATA_PATH + fname)[1:]
 
+
+def refresh_table_otbor_term():
+    q_err = 0
+    sum = 0
+    clear_table('otbor')
+    arr = file_to_vec(IN_DATA_PATH + 'otbor_term.csv')
+    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
+    cur = con.cursor()
+    for line in arr:
+        query = f''' INSERT INTO otbor (term, dep)
+VALUES ('{line}', '{line[:-1]}')'''
+        try:
+            sum += 1
+            cur.execute(query)
+        except Exception as ex:
+            q_err += 1
+    con.commit()
+    if con:
+        cur.close()
+        con.close()
+    ssay(f'refresh otbor\n{q_err=} {sum=}\n')
+
+def clear_part_table(table_name, arr):
+    for line in arr:
+        if table_name == 'departments':
+            del_dep(line[0])
+        elif table_name == 'terminals':
+            del_term(line[1])
+
+def refresh_table_from_file_full(table_name, fname, start=0):
+    q_err = 0
+    sum = 0
+    #clear_table(table_name)
+    arr = file_to_arr(fname)[start:]
+    #clear_part_table(table_name, arr)
+    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
+    cur = con.cursor()
+    for vec0 in arr:
+        vec = good_vec(vec0)
+        if table_name == 'departments':
+            query_del = f"""DELETE FROM public.departments
+	WHERE department = '{vec[0]}';"""
+            query = f'''INSERT INTO departments (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id)
+VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}');'''
+        elif table_name == 'terminals':
+            query_del = f"""DELETE FROM public.terminals
+	WHERE termial = '{vec[1]}';"""
+            query = f'''INSERT INTO public.terminals(
+	department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro, register, finish)
+	VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}', '{vec[19]}', '{vec[20]}', '{vec[21]}');'''
+        elif table_name == 'otbor':
+            query = f''' INSERT INTO otbor (term, dep)
+VALUES ('{vec[0]}', '{vec[1]}')'''
+        try:
+            cur.execute(query_del)
+        except:
+            pass
+        try:
+            sum += 1
+            cur.execute(query)
+        except Exception as ex:
+            q_err += 1
+    con.commit()
+    if con:
+        cur.close()
+        con.close()
+    ssay(f'refresh {table_name}\n{q_err=} {sum=}\n')
+
+def term_from_file_full():
+    refresh_table_from_file_full('terminals', IN_DATA_PATH + 'terminals.csv', start=1)
+
+def dep_from_file_full():
+    refresh_table_from_file_full('departments', IN_DATA_PATH + 'departments.csv', start=1)
+
+def otbor_from_file_full():
+    refresh_table_from_file_full('otbor', IN_DATA_PATH + 'otbor.csv', start=1)
+
+
+
 def refresh_table(table_name, fname):
+    q_err = 0
+    sum = 0
     clear_table(table_name)
     arr = table_from_file_to_arr(fname)
     con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
@@ -59,24 +160,26 @@ VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', 
             query = f''' INSERT INTO otbor (term, dep)
 VALUES ('{vec[0]}', '{vec[1]}')'''
         try:
+            sum += 1
             cur.execute(query)
         except Exception as ex:
-            p_red(str(ex))
+            q_err += 1
     con.commit()
     if con:
         cur.close()
         con.close()
-    p_blue(f'refresh {table_name}')
+    ssay(f'refresh {table_name}\n{q_err=} {sum=}\n')
+ 
 
 
 def title_string(s):
     return s.title()
 
 
-
+"""
 def insert_all_deps():
-    refresh_table('departments', 'departments.csv')
-
+    return refresh_table('departments', 'departments.csv')
+"""
 
 def mk_finish0(reg_date, mod):
     
@@ -113,70 +216,29 @@ def make_finish(vec):
             pass
             return vec
 
-
+"""
 def insert_all_terms():
-    refresh_table('terminals', 'terminals.csv')
-
-
-
+    return refresh_table('terminals', 'terminals.csv')
+"""
 
 def insert_all_otbor():
-    refresh_table('otbor', 'otbor.csv')
+    return refresh_table('otbor', 'otbor.csv')
 
-
-
-def send_to_gdrive(tname):
-    #print(f'# send {tname} to Gdrive')
-    q_err = 0
-    arr = []
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        #p_blue('db open ok')
-        cur.execute(f'SELECT *  FROM {tname}')
-        rows = cur.fetchall()
-        
-    except (Exception) as error:
-        q_err += 1
-        print('>>', error)
-    
-    finally:
-        if con:
-            cur.close()
-            con.close()
-    
-    text = ''
-    for vec in rows:
-        text += ';'.join(vec) + ';' + datetime.strftime(datetime.now(), "%Y.%m.%d %H:%M:%S") + '\n'
-    
-    text_add_file(text, GDRIVE_PATH + f'arhiv/{tname}.csv')
-
-
-
-def select_deps_to_gdrive():
-    send_to_gdrive('departments')
-
-def select_terms_to_gdrive():
-    send_to_gdrive('terminals')
-    
-    
-  
+def insert_all_otbor_term():
+    return refresh_table_otbor_term()  
 
 def table_to_file(tname):
-    print(f'# {tname} to file')
+    info = ''
     q_err = 0
     arr = []
     try:
         con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
         cur = con.cursor()
-        #p_blue('db open ok')
         cur.execute(f'SELECT *  FROM {tname}')
         rows = cur.fetchall()
-        #arr_to_file(rows, IN_DATA_PATH + 'pg_departments.csv')      
-
     except (Exception) as error:
         q_err += 1
-        print('>>', error)
+        info == str(error) + '\n'
     finally:
         if con:
             cur.close()
@@ -189,33 +251,37 @@ def table_to_file(tname):
 
     for vec in rows:
         text += ';'.join(vec) + '\n'
-    
-    text_to_file(text, OUT_DATA_PATH + f'pg_{tname}.csv')
+    fname = OUT_DATA_PATH + f'pg_{tname}.csv'
+    text_to_file(text, fname)
+    info += fname + '\n'
+    return info
 
 
 def select_terms_to_file():
-    table_to_file('terminals')
+    return table_to_file('terminals')
  
 def select_deps_to_file():
-    table_to_file('departments')
+    return table_to_file('departments')
 
 
 def select_table(tname):
     q_err = 0
+    sum = 0
     arr = []
     try:
         con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
         cur = con.cursor()
         cur.execute(f'SELECT *  FROM {tname}')
         rows = cur.fetchall()
-        
+        sum += 1
     except (Exception) as error:
         q_err += 1
-        print('>>', error)
+        alarm(error)
     finally:
         if con:
             cur.close()
             con.close()
+        ssay(f'select_table {q_err=}')
     return rows
 
 def select_deps():
@@ -226,6 +292,7 @@ def select_terms():
 
 
 def get_data(query):
+    info = ''
     q_err = 0
     arr = []
     try:
@@ -233,10 +300,9 @@ def get_data(query):
         cur = con.cursor()
         cur.execute(query)
         rows = cur.fetchall()
-
     except (Exception) as error:
         q_err += 1
-        print('>>', error)
+        info += str(error) + '\n'
     finally:
         if con:
             cur.close()
@@ -247,15 +313,7 @@ def get_data(query):
 
     
 
-def get_terms_data():
-    query = '''SELECT otbor.term, departments.id_terminal, departments.city,departments.region, 
-departments.street_type, departments.street, departments.hous, 
-terminals.serial_number, terminals.fiscal_number
-FROM otbor, terminals, departments
-WHERE otbor.term = terminals.termial
-AND departments.department = terminals.department
-ORDER BY terminals.termial;'''
-    return get_data(query)
+
 
 def get_deps_data():
     query = '''SELECT department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2
@@ -263,23 +321,17 @@ def get_deps_data():
     return get_data(query)
 
 
-def get_partners():
-    u = "'1700999'"
+def get_list_one(query):
     q_err = 0
-    query = f'''SELECT DISTINCT partner
-FROM departments
-WHERE department != {u}
-ORDER BY partner;'''
     arr = []
     try:
         con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
         cur = con.cursor()
         cur.execute(query)
         rows = cur.fetchall()
-
-    except (Exception) as error:
+    except (Exception) as err:
         q_err += 1
-        print('>>', error)
+        p_red(err)
     finally:
         if con:
             cur.close()
@@ -291,87 +343,50 @@ ORDER BY partner;'''
     return arr
 
 
-
-def get_summury_data():
-    u = "'1700999'"
-    query = f'''SELECT department, address, partner
+def get_partners():
+    u = ''
+    query = f'''SELECT DISTINCT partner
 FROM departments
 WHERE department != {u}
-ORDER BY department;'''
-    return get_data(query)
-
-def get_summury_partner_data(partner):
-    u = "'1700999'"
-    query = f'''SELECT department, region, district_region, post_index, city_type, city, district_city, street_type, street, hous, address, koatu, koatu2
-FROM departments
-WHERE department != {u} 
-AND partner ='{partner}'
-ORDER BY department;'''
-    return get_data(query)
-
-
-def get_site_data():
-    query = f'''SELECT department, edrpou, address, register  FROM departments ORDER BY department'''
-    return get_data(query)
-
-def get_natasha_data():
-    query = f'''SELECT department, edrpou, partner FROM departments
-ORDER BY partner'''
-    return get_data(query)
-
+ORDER BY partner;'''
+    return get_list_one(query)
+    
+    
 def get_terminals_list():
-    q_err = 0
-    print('# get_terminals_list')
     query = f'''SELECT termial FROM terminals
 ORDER BY termial'''
-    arr = []
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        cur.execute(query)
-        rows = cur.fetchall()
-
-    except (Exception) as error:
-        q_err += 1
-        print('>>', error)
-    finally:
-        if con:
-            cur.close()
-            con.close()
-    out_list = []
-    for unit in rows:
-        out_list.append(unit[0])
+    return get_list_one(query)
     
-    return out_list
 
+def get_serial_list():
+    query = f'''SELECT DISTINCT serial_number FROM terminals
+ORDER BY serial_number'''
+    return get_list_one(query)
+    
+def get_terminals_list_partner(partner):
+    query = f'''SELECT termial FROM terminals, departments
+    WHERE departments.department = terminals.department
+    AND departments.partner = '{partner}'
+ORDER BY termial;'''
+    return get_list_one(query)
+    
 
+def get_departments_list():
+    query = f'''SELECT department FROM departments
+ORDER BY department'''
+    return get_list_one(query)
+    
+
+def get_departments_new_list():
+    query = f'''SELECT department FROM departmentsnew
+ORDER BY department'''
+    return get_list_one(query)
+    
 def get_otbor_deps():
     query = f'''SELECT dep FROM otbor
 ORDER BY dep'''
-    q_err = 0
-    arr = []
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        p_blue('db open ok')
-        cur.execute(query)
-        rows = cur.fetchall()
-
-    except (Exception) as error:
-        q_err += 1
-        print('>>', error)
-    finally:
-        if con:
-            cur.close()
-            con.close()
-    out_list = []
-    for unit in rows:
-        out_list.append(unit[0])
+    return get_list_one(query)
     
-    return out_list
-
-
-
 def col_key_pg(hh, key_col_num = -1):
     os.system('cls')
     print('\n\n')
@@ -398,45 +413,7 @@ def col_key_pg(hh, key_col_num = -1):
     return listkey[choise]
 
 
-def get_kabinet_prro_data():
-    query = '''SELECT departments.tax_id, departments.koatu, departments.department,
-departments.address
-FROM otbor, departments
-WHERE otbor.dep = departments.department
-ORDER BY departments.department;'''
-    return get_data(query)
-
-
-def get_kabinet_knigi_data():
-    query = '''SELECT terminals.fiscal_number, terminals.model, terminals.serial_number,
-terminals.soft, terminals.rne_rro, terminals.department,
-departments.address, departments.koatu, departments.tax_id,
-terminals.oro_number, terminals.oro_serial,
-otbor.term
-FROM otbor, terminals, departments
-WHERE otbor.term = terminals.termial
-AND departments.department = terminals.department
-ORDER BY terminals.termial;'''
-    return get_data(query)
-
-
-def get_kabinet_rro_data():
-    query = '''SELECT terminals.department,
-departments.post_index, departments.region, departments.district_region,
-departments.city, departments.street, departments.hous,
-departments.koatu, departments.tax_id,
-terminals.model, terminals.serial_number, terminals.soft,
-terminals.producer, terminals.date_manufacture,
-terminals.rne_rro, terminals.oro_serial, terminals.ticket_serial,
-otbor.term
-FROM otbor, terminals, departments
-WHERE otbor.term = terminals.termial
-AND departments.department = terminals.department
-ORDER BY terminals.termial;'''
-    return get_data(query)
-
-
-def get_kabinet_pereezd_data():
+def get_kabinet_pereezd_old_data():
     query = '''SELECT terminals.department,
 departments.post_index, departments.region,
 departments.city, departments.street, departments.hous,
@@ -452,105 +429,6 @@ AND departments.department = terminals.department
 ORDER BY terminals.termial;'''
     return get_data(query)
 
-def get_kabinet_otmena_data():
-    query = '''SELECT terminals.ticket_number, terminals.serial_number,
-terminals.model, terminals.soft, terminals.rne_rro, 
-departments.address, departments.koatu, departments.tax_id,
-terminals.fiscal_number, departments.department
-FROM otbor, terminals, departments
-WHERE otbor.term = terminals.termial
-AND departments.department = terminals.department
-ORDER BY terminals.termial;'''
-    return get_data(query)
-
-
-def insert_all_depsarhiv():
-    now = str(datetime.strftime(datetime.now(), "%d.%m.%Y %H:%M:%S"))
-    data = select_deps()
-    #print(data)
-    q_err = 0
-    query = '''INSERT INTO public.departmentsarhiv(
-department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2, datetime)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
-
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        q_err = 0
-        
-        for vec in data:
-            if not vec:
-                continue
-            vec = list(vec)
-            try:
-                vec.append(now)
-                #print(vec)
-                cur.execute(query, vec)
-                
-            except (Exception) as error:
-                q_err += 1
-                print('>>', error)
-
-            if verb:
-                pass
-                #print(vec[0])                
-        con.commit()
-    except:
-        pass
-    finally:
-        if con:
-            cur.close()
-            con.close()
-
-    if q_err == 0:
-        p_blue('insert_all_depsarhiv\n')
-    else:
-        print('insert_all_depsarhiv', 'errors:', q_err, '\n')
-
-
-
-def insert_all_termsarhiv():
-    now = str(datetime.strftime(datetime.now(), "%d.%m.%Y %H:%M:%S"))
-    data = select_terms()
-    #print(data)
-    q_err = 0
-    query = '''INSERT INTO public.terminalsarhiv(
-	department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro, register, finish, datetime)
-	VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
-
-    try:
-        con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
-        cur = con.cursor()
-        q_err = 0
-        
-        for vec in data:
-            if not vec:
-                continue
-            vec = list(vec)
-            try:
-                vec.append(now)
-                cur.execute(query, vec)
-                
-            except (Exception) as error:
-                q_err += 1
-                print('>>', error)
-
-            if verb:
-                pass
-                #print(vec[0])                
-        con.commit()
-    except:
-        pass
-    finally:
-        if con:
-            cur.close()
-            con.close()
-
-    if q_err == 0:
-        p_blue('insert_all_termsarhiv\n')
-    else:
-        print('insert_all_termsarhiv', 'errors:', q_err, '\n')
-
 
 def get_history_data():
     query = '''SELECT terminals.termial, terminals.department,
@@ -561,7 +439,31 @@ AND terminals.termial = otbor.term
 ORDER BY terminals.termial;'''
     return get_data(query)
 
+def get_activ_term_data():
+    query = '''SELECT terminals.termial, terminals.department,
+departments.address, departments.partner
+FROM terminals, departments
+WHERE terminals.department = departments.department
+ORDER BY terminals.termial;'''
+    return get_data(query)
 
+def get_one_term_data(term):
+    query = f'''SELECT * 
+FROM terminals
+WHERE terminals.termial = '{term}';'''
+    return get_data(query)
+
+def get_one_dep_data(dep):
+    query = f'''SELECT * 
+FROM departments
+WHERE departments.department = '{dep}';'''
+    return get_data(query)
+
+def get_term_by_serial(serial):
+    query = f'''SELECT DISTINCT terminals.termial
+    FROM terminals
+WHERE serial_number = '{serial}';'''
+    return get_list_one(query)[0]
 
 
 def date_log():
@@ -588,9 +490,7 @@ VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{nau}', '{kind}');"""
         try:
             cur.execute(query)
         except Exception as ex:
-            print(ex)
-        if verb:
-            print(vec[1])                
+            pass               
     con.commit()
     
     if con:
@@ -602,15 +502,240 @@ VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{nau}', '{kind}');"""
     in_path = IN_DATA_PATH + 'drm.db'
     try:
         shutil.copy(in_path, out_path)
-        print(f'\n{out_path}')
     except:
-        print('\n\tno accback')
+        pass
+
+
+#_actual___________________________
 
 
 
+  
+def get_all_dep_data():
+    q = 'SELECT * FROM departments'
+    return get_data(q)
+
+def get_all_dep_new_data():
+    q = 'SELECT * FROM departmentsnew'
+    return get_data(q)
+
+def get_one_dep_data(dep):
+    q = f"""SELECT * FROM departments WHERE department = '{dep}';"""
+    return get_data(q)
+
+def get_one_dep_new_data(dep):
+    q = f"""SELECT * FROM departments WHERE departmentnew = '{dep}';"""
+    return get_data(q)
 
 
+def refresh_table_actual():
+    sum = 0
+    qerr = 0
+    clear_table('departmentsnew')
+    arr = get_all_dep_data()
+    con = psycopg2.connect(database="postgres", user = "postgres", password = "postgres", host = "127.0.0.1", port = "5432")
+    cur = con.cursor()
+    for vec in arr:
+        query = f"""INSERT INTO departmentsnew (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2)
+    VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}' , '{vec[19]}');"""
+        try:
+            cur.execute(query)
+            sum += 1
+        except Exception as ex:
+            qerr += 1
+            alarm(ex)
+    con.commit()
+    if con:
+        cur.close()
+        con.close()
+    ssay(f'refresh dep new\n{qerr=} {sum=}')
+    
+
+
+def title_string(s):
+    return s.title()
+
+
+def refresh_one_term(vec):
+    vec = good_vec(vec)
+    info = ''
+    try:
+        del_term(vec[1])
+    except:
+        pass
+    try:
+        query = f'''INSERT INTO public.terminals(
+	department, termial, model, serial_number, date_manufacture, soft, producer, rne_rro, sealing, fiscal_number, oro_serial, oro_number, ticket_serial, ticket_1sheet, ticket_number, sending, books_arhiv, tickets_arhiv, to_rro, owner_rro, register, finish)
+	VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}', '{vec[19]}', '{vec[20]}', '{vec[11]}');'''
+        dbexec(query)
+    except Exception as ex:
+        print(ex)
+
+
+   
+def refresh_one_dep(vec):
+    vec = good_vec(vec)
+    info = ''
+    vec.append('')
+    try:
+        del_dep(vec[0])
+    except Exception as ex:
+        info += str(ex)
+    try:
+        query = f"""INSERT INTO departments (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2)
+    VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}' , '{vec[19]}');"""
+        dbexec(query)
+    except:
+        pass
+
+def act_refresh_one_dep(dep):
+    dep = str(dep)
+    vec = []
+    try:
+        vec = get_one_dep_data(dep)[0]
+    except Exception as ex:
+        pass
+    try:
+        del_dep_new(dep)
+    except:
+        pass
+    try:
+        query = f"""INSERT INTO departmentsnew (department, region, district_region, district_city, city_type, city, street, street_type, hous, post_index, partner, status, register, edrpou, address, partner_name, id_terminal, koatu, tax_id, koatu2)
+    VALUES ('{vec[0]}', '{vec[1]}', '{vec[2]}', '{vec[3]}', '{vec[4]}', '{vec[5]}', '{vec[6]}', '{vec[7]}', '{vec[8]}', '{vec[9]}', '{vec[10]}', '{vec[11]}', '{vec[12]}', '{vec[13]}', '{vec[14]}', '{vec[15]}', '{vec[16]}', '{vec[17]}', '{vec[18]}' , '{vec[19]}');"""
+        dbexec(query)
+    except:
+        pass
+
+
+#edit___________________________
+
+def mk_txt(key_field):
+    if len(key_field) < 8:
+        txt = ""
+        heads = file_to_arr(IN_DATA_PATH + "departments.csv")[0]
+        heads.append('koatu2')
+        txt_arr = []
+        for i in range(len(heads)):
+            heads[i] = f'{heads[i]};'
+        try:
+            data = get_one_dep_data(key_field)[0]
+            for i in range(len(data)):
+                try:
+                    heads[i] += data[i]
+                except:
+                    pass
+        except:
+            pass
+        return '\n'.join(heads)
+    else:
+        txt = ""
+        heads = file_to_arr(IN_DATA_PATH + "terminals.csv")[0]
+        txt_arr = []
+        for i in range(len(heads)):
+            heads[i] = f'{heads[i]};'
+        try:
+            data = get_one_term_data(key_field)[0]
+            for i in range(len(data)):
+                try:
+                    heads[i] += data[i]
+                except:
+                    pass
+        except:
+            pass
+        return '\n'.join(heads)
+
+
+def get_key_from_textbox(txt):
+    arr = txt.split('\n')
+    try:
+        dep = arr[0].split(';')[1]
+        term = arr[1].split(';')[1]
+        if dep and term and dep in term:
+            return arr[1].split(';')[1]
+    except:
+        pass
+    return arr[0].split(';')[1]
+
+def get_data_from_textbox(txt):
+    vec = []
+    for line in txt.split('\n'):
+        try:
+            vec.append(line.split(';')[1])
+        except:
+            vec.append(line)
+    return vec
+  
+def next_dep(dep):
+    vec = get_departments_list()
+    if dep in vec:
+        if vec.index(dep) < len(vec) - 1:
+            return vec[vec.index(dep) + 1]
+        else:
+            return vec[0]
+    else:
+        return(str(vec))
+
+def pred_dep(dep):
+    vec = get_departments_list()
+    if dep in vec:
+        if vec.index(dep) > 0:
+            return vec[vec.index(dep) - 1]
+        else:
+            return vec[len(vec) -1]
+
+def next_term(term):
+    vec = get_terminals_list()
+    if term in vec:
+        if vec.index(term) < len(vec) - 1:
+            return vec[vec.index(term) + 1]
+        else:
+            return vec[0] 
+
+def pred_term(term):
+    vec = get_terminals_list()
+    if term in vec:
+        if vec.index(term) > 0:
+            return vec[vec.index(term) - 1]
+        else:
+            return vec[len(vec) -1]
+
+def get_address(dep):
+    query = f"select * from departments WHERE department = '{dep}'"
+    arr = get_data(query)
+    return arr[0][14]
+
+def get_koatu(dep):
+    query = f"select * from departments WHERE department = '{dep}'"
+    arr = get_data(query)
+    return arr[0][17]
+
+def get_tax_id(dep):
+    query = f"select * from departments WHERE department = '{dep}'"
+    arr = get_data(query)
+    return arr[0][18]
+    
+def get_koatu2(dep):
+    query = f"select * from departments WHERE department = '{dep}'"
+    arr = get_data(query)
+    city = arr[0][5].strip()
+    distrCity = arr[0][3].strip()
+    koatu = arr[0][17].strip()
+    if not city:
+        city = ''
+    if not distrCity:
+        distrCity = ''
+    if not koatu:
+        koatu = ''
+    rez = ""
+    try:
+        rez = mk_koatu2(city, distrCity, koatu)
+    except:
+        pass
+    return rez
 
 
 
 verb = False
+
+
+

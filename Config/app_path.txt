@@ -1,3 +1,0 @@
-C:/Users/a.zaigraev/Desktop/repos/alexeizaigraev/SharpForPy/bin/Release/SharpForPy.exe
-C:/Users/a.zaigraev/Desktop/Repos/SharpForPy/bin/Release/SharpForPy.exe
-C:/Users/a.zaigraev/Source/Repos/SharpForPy/bin/Release/SharpForPy.exe

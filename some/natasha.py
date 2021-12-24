@@ -8,6 +8,11 @@ from modules import *
 from papa_pg import *
 from datetime import datetime, date
 
+def get_natasha_data():
+    query = f'''SELECT department, edrpou, partner FROM departmentsnew
+ORDER BY partner'''
+    return get_data(query)
+
 def count_comon(partner):
     count = 0
     for line in access_data:
@@ -28,7 +33,6 @@ def count_pnfp(partner):
         if partner in line[-1] and line[0] in natasha and not line[1]:
             count += 1
     return(count)
-
 
 
 natasha = set(mk_natasha())
@@ -54,26 +58,21 @@ for partner in partner_list:
         summ_edrpou += count_edrpou(partner)
         summ_pnfp += count_pnfp(partner)
 
-print()
 out_text += '\n'
-#print(out_text)
+print(out_text)
 
-#print('Всего с ЕДРПОУ', summ_edrpou)
+print('Всего с ЕДРПОУ', summ_edrpou)
 out_text += f'Всего с ЕДРПОУ {summ_edrpou}\n'
-#print('Всего ПНФП', summ_pnfp)
+print('Всего ПНФП', summ_pnfp)
 out_text += f'Всего ПНФП {summ_pnfp}\n'
-#print('Всего', summ_comon)
+print('Всего', summ_comon)
 out_text += f'Всего {summ_comon}\n'
 
-p_green('\n\n' + out_text)
+info = '\n\n' + out_text
 
 now = str(datetime.today())[:10]
 ofname = DATA_PATH + f'Количество отделений/Отделения-{now}.csv'
-p_yellow('\n\t save?\t\t yes [Enter] ->')
-choise = input()
-if not choise:
-    text_to_file(out_text, ofname)
-else:
-    p_blue('\tDu-Du :)')
-     
-        
+info += f'\n\n{ofname}'
+save_and_show(out_text, ofname)
+
+

@@ -2,8 +2,23 @@ import os.path, sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir)) 
 
 from modules import *
-#from modules_base import *
-from papa_pg import get_kabinet_knigi_data
+
+from papa_pg import get_data
+
+
+def get_kabinet_knigi_data():
+    query = '''SELECT terminals.fiscal_number, terminals.model, terminals.serial_number,
+terminals.soft, terminals.rne_rro, terminals.department,
+departments.address, departments.koatu, departments.tax_id,
+terminals.oro_number, terminals.oro_serial,
+otbor.term
+FROM otbor, terminals, departments
+WHERE otbor.term = terminals.termial
+AND departments.department = terminals.department
+ORDER BY terminals.termial;'''
+    return get_data(query)
+
+
 
 data = get_kabinet_knigi_data()
 
@@ -63,8 +78,8 @@ for insert_data in data:
   </DECLARBODY>
 </DECLAR>"""
 
-    ofname = KABINET_DIR + 'knigi_' + insert_data[-1] + '_' + insert_data[2] + '.xml'
-    #print(ofname)
+    ofname = KABINET_DIR + insert_data[-1] + '_knigi_' + insert_data[2] + '.xml'
+    
     text_to_file_cp1251(shablon, ofname)
-
+    #say(ofname)
 #loger('knigi')

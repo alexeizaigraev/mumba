@@ -6,14 +6,24 @@ from papa_pg import *
 import os
 
 
+def get_terms_data():
+    query = '''SELECT otbor.term, departments.id_terminal, departments.city,departments.region, 
+departments.street_type, departments.street, departments.hous, 
+terminals.serial_number, terminals.fiscal_number
+FROM otbor, terminals, departments
+WHERE otbor.term = terminals.termial
+AND departments.department = terminals.department
+ORDER BY terminals.termial;'''
+    return get_data(query)
+
 def def_agent():
     h = dict()
     h['shablon1'] = ''
     h['shablon2'] = ''
     h['soft'] = ''
     h['limit'] = ''
-    a = file_to_arr(COMON_DATA_PATH)
-    for vec in a:
+    #a = file_to_arr(COMON_DATA_PATH)
+    for vec in comon_arr:
         if ag_cod in vec[0]:
             h['shablon1'] = vec[ColDataShablon1]
             h['shablon2'] = vec[ColDataShablon2]
@@ -21,12 +31,12 @@ def def_agent():
             h['limit'] = vec[ColDataLimit]
             break
     if 'shablon1' in h['shablon1']:
-        sos('Незнакомый агент', ag_cod)
+        pass
+        #info += f'Незнакомый агент {ag_cod}'
     return h
 
-
-init()
-
+info = ''
+comon_arr = file_to_arr(COMON_DATA_PATH)
 data = get_terms_data()
 line = ''
 ag_cog = ''
@@ -87,7 +97,7 @@ for line in data:
 
     out_text += out_line + "\n"
     #print(f'{Fore.BLUE} {out_line}')
-    p_green(out_line)
+    #say(out_line + '\n\n')
 full_out_fname = OUT_DATA_PATH + fname_out
 text_to_file(out_text, full_out_fname)
-
+say(out_text)
